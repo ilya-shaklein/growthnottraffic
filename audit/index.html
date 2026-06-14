@@ -1,1 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Funnel X-Ray · Разбор воронки лендинга</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<style>
+  :root{
+    --bg:#0a0a0f; --bg2:#111118; --bg3:#16161f;
+    --accent:#6c63ff; --accent2:#a78bfa;
+    --text:#f0f0f5; --muted:#8888aa;
+    --border:rgba(108,99,255,0.18); --card:rgba(255,255,255,0.04);
+    --radius:16px; --font:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --green:#34d399; --amber:#fbbf24; --red:#f87171;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased;padding:40px 22px}
+  .wrap{max-width:760px;margin:0 auto}
+  a{color:inherit}
+  .back{font-size:13px;color:var(--muted);text-decoration:none;display:inline-block;margin-bottom:24px}
+  .back:hover{color:var(--accent2)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--accent2);text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-1px;line-height:1.12}
+  .sub{font-size:15px;color:var(--muted);margin:10px 0 0;line-height:1.55}
+  .tabs{display:flex;gap:8px;margin:24px 0 12px}
+  .tab{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:8px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted)}
+  .tab.active{border-color:var(--accent);background:var(--accent);color:#fff}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+  input,textarea{width:100%;font-family:var(--mono);font-size:15px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);outline:none;color:var(--text);background:var(--bg2)}
+  input:focus,textarea:focus{border-color:var(--accent)}
+  textarea{font-family:var(--font);font-size:14px;resize:vertical;min-height:150px}
+  .hidden{display:none}
+  button.go{margin-top:12px;width:100%;font-family:var(--font);font-size:15px;font-weight:700;padding:14px 18px;border-radius:10px;border:none;cursor:pointer;background:var(--accent);color:#fff;transition:opacity .2s}
+  button.go:hover{opacity:.9}
+  button.go:disabled{background:var(--bg3);color:var(--muted);cursor:default}
+  .err{margin-top:12px;font-size:13px;color:var(--red);line-height:1.45}
+  .loading{margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+  .res{margin-top:24px}
+  .hero{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;display:flex;gap:24px;align-items:center}
+  .score{text-align:center;min-width:96px}
+  .score .n{font-size:54px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .score .l{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--muted);margin-top:6px}
+  .hero .v{border-left:1px solid var(--border);padding-left:22px}
+  .verdict{font-size:16px;font-weight:700;line-height:1.35;margin-bottom:6px}
+  .prod{font-size:13px;color:var(--muted);line-height:1.45}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px}
+  .dim{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .dim .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .dim .t{font-size:13px;font-weight:700}
+  .badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:6px;color:#0a0a0f}
+  .dim .note{font-size:13px;color:var(--muted);line-height:1.45}
+  .box{margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+  .box .cap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .gap{display:flex;gap:10px;padding:8px 0;font-size:14px;line-height:1.45;border-top:1px solid var(--border)}
+  .gap:first-child{border-top:none}
+  .gap .x{color:var(--red);font-weight:700}
+  .hyp{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:8px;display:flex;gap:14px}
+  .hyp .num{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--accent2);min-width:26px}
+  .hyp .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+  .hyp .act{font-size:14px;font-weight:700;line-height:1.35}
+  .hyp .imp{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;white-space:nowrap}
+  .hyp .why{font-size:13px;color:var(--muted);line-height:1.45}
+  .hook{margin-top:18px;background:linear-gradient(135deg,rgba(108,99,255,0.18),rgba(167,139,250,0.05));border:1px solid var(--accent);border-radius:var(--radius);padding:22px}
+  .hook .t{font-size:16px;font-weight:700;line-height:1.4;margin-bottom:6px}
+  .hook .d{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+  .hook a{display:inline-block;font-family:var(--font);font-size:14px;font-weight:700;text-decoration:none;color:#fff;background:var(--accent);padding:12px 20px;border-radius:10px}
+  .hook a:hover{opacity:.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← на главную</a>
+  <div class="eyebrow">Funnel X-Ray · paid acquisition audit</div>
+  <h1>Разбор воронки лендинга<br>за 60 секунд</h1>
+  <p class="sub">Кидаешь URL - получаешь приговор: позиционирование, оффер, CTA, дыры воронки и гипотезы на рост конверсии.</p>
 
+  <div class="tabs">
+    <div class="tab active" data-mode="url">По URL</div>
+    <div class="tab" data-mode="paste">Вставить текст</div>
+  </div>
+
+  <div class="panel">
+    <input id="url" placeholder="example.com" />
+    <textarea id="paste" class="hidden" placeholder="Вставь основной текст страницы: заголовок, оффер, кнопки, блоки..."></textarea>
+    <button class="go" id="go">Разобрать воронку →</button>
+    <div class="err hidden" id="err"></div>
+  </div>
+
+  <div class="loading hidden" id="loading">→ читаю страницу и разбираю воронку</div>
+  <div class="res hidden" id="res"></div>
+</div>
+
+<script>
+  var CONTACT = { handle: "@ilya_shaklein", url: "https://t.me/ilya_shaklein" };
+  var mode="url";
+  var $=function(id){return document.getElementById(id);};
+  function sColor(s){return s==="ok"?"var(--green)":s==="weak"?"var(--amber)":"var(--red)";}
+  function sLabel(s){return s==="ok"?"ОК":s==="weak"?"СЛАБО":"ДЫРА";}
+  function scColor(n){return n>=70?"var(--green)":n>=40?"var(--amber)":"var(--red)";}
+  function imp(i){return i==="high"?{c:"var(--accent2)",t:"HIGH"}:i==="med"?{c:"var(--amber)",t:"MED"}:{c:"var(--muted)",t:"LOW"};}
+  function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML;}
+
+  document.querySelectorAll(".tab").forEach(function(t){
+    t.onclick=function(){
+      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
+      t.classList.add("active");mode=t.dataset.mode;
+      $("url").classList.toggle("hidden",mode!=="url");
+      $("paste").classList.toggle("hidden",mode!=="paste");
+    };
+  });
+  $("go").onclick=run;
+  $("url").addEventListener("keydown",function(e){if(e.key==="Enter")run();});
+
+  function setLoading(on){$("go").disabled=on;$("go").textContent=on?"Анализирую...":"Разобрать воронку →";$("loading").classList.toggle("hidden",!on);}
+  function showErr(m){$("err").textContent=m;$("err").classList.remove("hidden");}
+
+  async function run(){
+    $("err").classList.add("hidden");$("res").classList.add("hidden");
+    var payload;
+    if(mode==="url"){var u=$("url").value.trim();if(!u){showErr("Введи URL лендинга.");return;}payload={url:u};}
+    else{var t=$("paste").value.trim();if(t.length<80){showErr("Слишком мало текста. Вставь контент страницы.");return;}payload={text:t};}
+    setLoading(true);
+    try{
+      var r=await fetch("/api/audit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      var data=await r.json();
+      if(!r.ok||data.error){showErr(data.error||"Сбой при анализе.");setLoading(false);return;}
+      render(data);$("res").classList.remove("hidden");
+    }catch(e){showErr("Сбой сети. Попробуй ещё раз.");}
+    setLoading(false);
+  }
+
+  function render(d){
+    var dims=[["Позиционирование",d.positioning],["Оффер",d.offer],["CTA",d.cta],["Доверие / пруфы",d.trust]];
+    var dimsHtml=dims.map(function(p){var x=p[1];if(!x)return "";
+      return '<div class="dim"><div class="h"><span class="t">'+esc(p[0])+'</span>'+
+        '<span class="badge" style="background:'+sColor(x.status)+'">'+sLabel(x.status)+'</span></div>'+
+        '<div class="note">'+esc(x.note)+'</div></div>';}).join("");
+    var gapsHtml=(d.gaps||[]).map(function(g){return '<div class="gap"><span class="x">✕</span><span>'+esc(g)+'</span></div>';}).join("");
+    var hypHtml=(d.hypotheses||[]).map(function(h,i){var m=imp(h.impact);
+      return '<div class="hyp"><div class="num">'+String(i+1).padStart(2,"0")+'</div><div style="flex:1">'+
+        '<div class="top"><span class="act">'+esc(h.action)+'</span><span class="imp" style="color:'+m.c+'">'+m.t+'</span></div>'+
+        '<div class="why">'+esc(h.why)+'</div></div></div>';}).join("");
+    $("res").innerHTML=
+      '<div class="hero"><div class="score"><div class="n" style="color:'+scColor(d.score)+'">'+Math.round(d.score)+'</div>'+
+      '<div class="l">/ 100 READINESS</div></div><div class="v"><div class="verdict">'+esc(d.verdict)+'</div>'+
+      '<div class="prod">'+esc(d.product)+'</div></div></div>'+
+      '<div class="grid">'+dimsHtml+'</div>'+
+      (gapsHtml?'<div class="box"><div class="cap" style="color:var(--red)">Где течёт воронка</div>'+gapsHtml+'</div>':'')+
+      (hypHtml?'<div style="margin-top:14px"><div class="cap" style="color:var(--accent2);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Что тестить первым</div>'+hypHtml+'</div>':'')+
+      '<div class="hook"><div class="t">Это первичный разбор. Полный аудит + я это починю.</div>'+
+      '<div class="d">Подниму конверсию воронки, перепакую оффер и позиционирование, выстрою paid acquisition под unit-экономику.</div>'+
+      '<a href="'+CONTACT.url+'" target="_blank">Написать → '+CONTACT.handle+'</a></div>';
+  }
+</script>
+</body>
+</html>
