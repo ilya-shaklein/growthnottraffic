@@ -71,92 +71,227 @@
   .hook .d{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
   .hook a{display:inline-block;font-family:var(--font);font-size:14px;font-weight:700;text-decoration:none;color:#fff;background:var(--accent);padding:12px 20px;border-radius:10px}
   .hook a:hover{opacity:.9}
+  .lang-toggle{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:24px;width:fit-content}
+  .lang-btn{padding:4px 12px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s}
+  .lang-btn.active{background:var(--accent);color:#fff}
+  [data-lang]{display:none}
+  [data-lang].vis{display:inline}
+  [data-lang].visb{display:block}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="/">← на главную</a>
-  <div class="eyebrow">Funnel X-Ray · paid acquisition audit</div>
-  <h1>Разбор воронки лендинга<br>за 60 секунд</h1>
-  <p class="sub">Кидаешь URL - получаешь приговор: позиционирование, оффер, CTA, дыры воронки и гипотезы на рост конверсии.</p>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+    <a class="back" href="/" style="margin-bottom:0">
+      <span data-lang="ru" class="vis">← на главную</span>
+      <span data-lang="en" class="vis">← back to main</span>
+    </a>
+    <div class="lang-toggle">
+      <button class="lang-btn" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
 
-  <div class="tabs">
-    <div class="tab active" data-mode="url">По URL</div>
-    <div class="tab" data-mode="paste">Вставить текст</div>
+  <div class="eyebrow">Funnel X-Ray · paid acquisition audit</div>
+  <h1>
+    <span data-lang="ru" class="visb">Разбор воронки лендинга<br>за 60 секунд</span>
+    <span data-lang="en" class="visb">Landing page funnel audit<br>in 60 seconds</span>
+  </h1>
+  <p class="sub">
+    <span data-lang="ru" class="vis">Кидаешь URL - получаешь приговор: позиционирование, оффер, CTA, дыры воронки и гипотезы на рост конверсии.</span>
+    <span data-lang="en" class="vis">Drop a URL - get a verdict: positioning, offer, CTA, funnel gaps and hypotheses to grow conversion.</span>
+  </p>
+
+  <div class="tabs" style="margin-top:24px">
+    <div class="tab active" data-mode="url">
+      <span data-lang="ru" class="vis">По URL</span>
+      <span data-lang="en" class="vis">By URL</span>
+    </div>
+    <div class="tab" data-mode="paste">
+      <span data-lang="ru" class="vis">Вставить текст</span>
+      <span data-lang="en" class="vis">Paste text</span>
+    </div>
   </div>
 
   <div class="panel">
     <input id="url" placeholder="example.com" />
-    <textarea id="paste" class="hidden" placeholder="Вставь основной текст страницы: заголовок, оффер, кнопки, блоки..."></textarea>
-    <button class="go" id="go">Разобрать воронку →</button>
+    <textarea id="paste" class="hidden">
+    </textarea>
+    <button class="go" id="go">
+      <span data-lang="ru" class="vis">Разобрать воронку →</span>
+      <span data-lang="en" class="vis">Run audit →</span>
+    </button>
     <div class="err hidden" id="err"></div>
   </div>
 
-  <div class="loading hidden" id="loading">→ читаю страницу и разбираю воронку</div>
+  <div class="loading hidden" id="loading">
+    <span data-lang="ru" class="vis">→ читаю страницу и разбираю воронку</span>
+    <span data-lang="en" class="vis">→ reading page and analyzing funnel</span>
+  </div>
   <div class="res hidden" id="res"></div>
 </div>
 
 <script>
   var CONTACT = { handle: "@ilya_shaklein", url: "https://t.me/ilya_shaklein" };
-  var mode="url";
-  var $=function(id){return document.getElementById(id);};
-  function sColor(s){return s==="ok"?"var(--green)":s==="weak"?"var(--amber)":"var(--red)";}
-  function sLabel(s){return s==="ok"?"ОК":s==="weak"?"СЛАБО":"ДЫРА";}
-  function scColor(n){return n>=70?"var(--green)":n>=40?"var(--amber)":"var(--red)";}
-  function imp(i){return i==="high"?{c:"var(--accent2)",t:"HIGH"}:i==="med"?{c:"var(--amber)",t:"MED"}:{c:"var(--muted)",t:"LOW"};}
-  function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML;}
+  var mode = "url";
+  var currentLang = localStorage.getItem('lang') || 'ru';
+  var $ = function(id){ return document.getElementById(id); };
 
-  document.querySelectorAll(".tab").forEach(function(t){
-    t.onclick=function(){
-      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
-      t.classList.add("active");mode=t.dataset.mode;
-      $("url").classList.toggle("hidden",mode!=="url");
-      $("paste").classList.toggle("hidden",mode!=="paste");
+  var i18n = {
+    ru: {
+      urlPlaceholder: "example.com",
+      pastePlaceholder: "Вставь основной текст страницы: заголовок, оффер, кнопки, блоки...",
+      goBtn: "Разобрать воронку →",
+      analyzing: "Анализирую...",
+      errUrl: "Введи URL лендинга.",
+      errText: "Слишком мало текста. Вставь контент страницы.",
+      errNet: "Сбой сети. Попробуй ещё раз.",
+      errGeneric: "Сбой при анализе.",
+      dims: ["Позиционирование","Оффер","CTA","Доверие / пруфы"],
+      ok: "ОК", weak: "СЛАБО", hole: "ДЫРА",
+      gapsCap: "Где течёт воронка",
+      hypCap: "Что тестить первым",
+      hookTitle: "Это первичный разбор. Полный аудит + я это починю.",
+      hookDesc: "Подниму конверсию воронки, перепакую оффер и позиционирование, выстрою paid acquisition под unit-экономику.",
+      hookBtn: "Написать → " + CONTACT.handle
+    },
+    en: {
+      urlPlaceholder: "example.com",
+      pastePlaceholder: "Paste the main page text: headline, offer, buttons, sections...",
+      goBtn: "Run audit →",
+      analyzing: "Analyzing...",
+      errUrl: "Enter a landing page URL.",
+      errText: "Too little text. Paste the page content.",
+      errNet: "Network error. Try again.",
+      errGeneric: "Analysis failed.",
+      dims: ["Positioning","Offer","CTA","Trust / proof"],
+      ok: "OK", weak: "WEAK", hole: "GAP",
+      gapsCap: "Where the funnel leaks",
+      hypCap: "What to test first",
+      hookTitle: "This is a quick scan. Full audit + I'll fix it.",
+      hookDesc: "I'll lift funnel conversion, repackage your offer and positioning, and build paid acquisition around your unit economics.",
+      hookBtn: "Message → " + CONTACT.handle
+    }
+  };
+
+  function t(key){ return i18n[currentLang][key]; }
+
+  function setLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('lang', lang);
+    document.querySelectorAll('.lang-btn').forEach(function(btn){
+      btn.classList.toggle('active', btn.textContent === lang.toUpperCase());
+    });
+    document.querySelectorAll('[data-lang]').forEach(function(el){
+      var isBlock = el.classList.contains('visb') || el.tagName === 'H1' || el.dataset.block;
+      el.className = el.className.replace(/\bvis\b|\bvisb\b/g,'').trim();
+      if(el.getAttribute('data-lang') === lang){
+        el.classList.add(isBlock ? 'visb' : 'vis');
+      }
+    });
+    // update dynamic UI
+    var goBtn = $('go');
+    if(goBtn && !goBtn.disabled) goBtn.querySelector('[data-lang="'+lang+'"]') && updateGoBtn(false);
+    var paste = $('paste');
+    if(paste) paste.placeholder = t('pastePlaceholder');
+    var url = $('url');
+    if(url) url.placeholder = t('urlPlaceholder');
+    document.documentElement.lang = lang;
+  }
+
+  function updateGoBtn(loading){
+    var btn = $('go');
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span data-lang="ru" class="'+(currentLang==='ru'?'vis':'')+'">Анализирую...</span><span data-lang="en" class="'+(currentLang==='en'?'vis':'')+'">Analyzing...</span>'
+      : '<span data-lang="ru" class="'+(currentLang==='ru'?'vis':'')+'">Разобрать воронку →</span><span data-lang="en" class="'+(currentLang==='en'?'vis':'')+'">Run audit →</span>';
+  }
+
+  function sColor(s){ return s==="ok"?"var(--green)":s==="weak"?"var(--amber)":"var(--red)"; }
+  function sLabel(s){ return s==="ok"?t('ok'):s==="weak"?t('weak'):t('hole'); }
+  function scColor(n){ return n>=70?"var(--green)":n>=40?"var(--amber)":"var(--red)"; }
+  function imp(i){ return i==="high"?{c:"var(--accent2)",t:"HIGH"}:i==="med"?{c:"var(--amber)",t:"MED"}:{c:"var(--muted)",t:"LOW"}; }
+  function esc(s){ var d=document.createElement("div"); d.textContent=s==null?"":String(s); return d.innerHTML; }
+
+  document.querySelectorAll(".tab").forEach(function(tab){
+    tab.onclick = function(){
+      document.querySelectorAll(".tab").forEach(function(x){ x.classList.remove("active"); });
+      tab.classList.add("active");
+      mode = tab.dataset.mode;
+      $("url").classList.toggle("hidden", mode !== "url");
+      $("paste").classList.toggle("hidden", mode !== "paste");
     };
   });
-  $("go").onclick=run;
-  $("url").addEventListener("keydown",function(e){if(e.key==="Enter")run();});
 
-  function setLoading(on){$("go").disabled=on;$("go").textContent=on?"Анализирую...":"Разобрать воронку →";$("loading").classList.toggle("hidden",!on);}
-  function showErr(m){$("err").textContent=m;$("err").classList.remove("hidden");}
+  $("go").onclick = run;
+  $("url").addEventListener("keydown", function(e){ if(e.key === "Enter") run(); });
+
+  function setLoading(on){
+    updateGoBtn(on);
+    $("loading").classList.toggle("hidden", !on);
+  }
+
+  function showErr(m){ $("err").textContent = m; $("err").classList.remove("hidden"); }
 
   async function run(){
-    $("err").classList.add("hidden");$("res").classList.add("hidden");
+    $("err").classList.add("hidden");
+    $("res").classList.add("hidden");
     var payload;
-    if(mode==="url"){var u=$("url").value.trim();if(!u){showErr("Введи URL лендинга.");return;}payload={url:u};}
-    else{var t=$("paste").value.trim();if(t.length<80){showErr("Слишком мало текста. Вставь контент страницы.");return;}payload={text:t};}
+    if(mode === "url"){
+      var u = $("url").value.trim();
+      if(!u){ showErr(t('errUrl')); return; }
+      payload = {url: u};
+    } else {
+      var txt = $("paste").value.trim();
+      if(txt.length < 80){ showErr(t('errText')); return; }
+      payload = {text: txt};
+    }
     setLoading(true);
-    try{
-      var r=await fetch("/api/audit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      var data=await r.json();
-      if(!r.ok||data.error){showErr(data.error||"Сбой при анализе.");setLoading(false);return;}
-      render(data);$("res").classList.remove("hidden");
-    }catch(e){showErr("Сбой сети. Попробуй ещё раз.");}
+    try {
+      var r = await fetch("/api/audit", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+      var data = await r.json();
+      if(!r.ok || data.error){ showErr(data.error || t('errGeneric')); setLoading(false); return; }
+      render(data);
+      $("res").classList.remove("hidden");
+    } catch(e){ showErr(t('errNet')); }
     setLoading(false);
   }
 
   function render(d){
-    var dims=[["Позиционирование",d.positioning],["Оффер",d.offer],["CTA",d.cta],["Доверие / пруфы",d.trust]];
-    var dimsHtml=dims.map(function(p){var x=p[1];if(!x)return "";
-      return '<div class="dim"><div class="h"><span class="t">'+esc(p[0])+'</span>'+
+    var dimKeys = ["positioning","offer","cta","trust"];
+    var dimLabels = t('dims');
+    var dimsHtml = dimKeys.map(function(key, i){
+      var x = d[key]; if(!x) return "";
+      return '<div class="dim"><div class="h"><span class="t">'+esc(dimLabels[i])+'</span>'+
         '<span class="badge" style="background:'+sColor(x.status)+'">'+sLabel(x.status)+'</span></div>'+
-        '<div class="note">'+esc(x.note)+'</div></div>';}).join("");
-    var gapsHtml=(d.gaps||[]).map(function(g){return '<div class="gap"><span class="x">✕</span><span>'+esc(g)+'</span></div>';}).join("");
-    var hypHtml=(d.hypotheses||[]).map(function(h,i){var m=imp(h.impact);
+        '<div class="note">'+esc(x.note)+'</div></div>';
+    }).join("");
+
+    var gapsHtml = (d.gaps||[]).map(function(g){
+      return '<div class="gap"><span class="x">✕</span><span>'+esc(g)+'</span></div>';
+    }).join("");
+
+    var hypHtml = (d.hypotheses||[]).map(function(h,i){
+      var m = imp(h.impact);
       return '<div class="hyp"><div class="num">'+String(i+1).padStart(2,"0")+'</div><div style="flex:1">'+
         '<div class="top"><span class="act">'+esc(h.action)+'</span><span class="imp" style="color:'+m.c+'">'+m.t+'</span></div>'+
-        '<div class="why">'+esc(h.why)+'</div></div></div>';}).join("");
-    $("res").innerHTML=
+        '<div class="why">'+esc(h.why)+'</div></div></div>';
+    }).join("");
+
+    $("res").innerHTML =
       '<div class="hero"><div class="score"><div class="n" style="color:'+scColor(d.score)+'">'+Math.round(d.score)+'</div>'+
       '<div class="l">/ 100 READINESS</div></div><div class="v"><div class="verdict">'+esc(d.verdict)+'</div>'+
       '<div class="prod">'+esc(d.product)+'</div></div></div>'+
       '<div class="grid">'+dimsHtml+'</div>'+
-      (gapsHtml?'<div class="box"><div class="cap" style="color:var(--red)">Где течёт воронка</div>'+gapsHtml+'</div>':'')+
-      (hypHtml?'<div style="margin-top:14px"><div class="cap" style="color:var(--accent2);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Что тестить первым</div>'+hypHtml+'</div>':'')+
-      '<div class="hook"><div class="t">Это первичный разбор. Полный аудит + я это починю.</div>'+
-      '<div class="d">Подниму конверсию воронки, перепакую оффер и позиционирование, выстрою paid acquisition под unit-экономику.</div>'+
-      '<a href="'+CONTACT.url+'" target="_blank">Написать → '+CONTACT.handle+'</a></div>';
+      (gapsHtml?'<div class="box"><div class="cap" style="color:var(--red)">'+t('gapsCap')+'</div>'+gapsHtml+'</div>':'')+
+      (hypHtml?'<div style="margin-top:14px"><div class="cap" style="color:var(--accent2);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">'+t('hypCap')+'</div>'+hypHtml+'</div>':'')+
+      '<div class="hook"><div class="t">'+esc(t('hookTitle'))+'</div>'+
+      '<div class="d">'+esc(t('hookDesc'))+'</div>'+
+      '<a href="'+CONTACT.url+'" target="_blank">'+esc(t('hookBtn'))+'</a></div>';
   }
+
+  // init
+  setLang(currentLang);
 </script>
 </body>
 </html>
